@@ -1,0 +1,20 @@
+# Archivos de compilación
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+
+# Carpetas de compilación
+Debug/
+Release/
+
+# Archivos del IDE
+.cproject
+.project
+.settings/
+*.launch
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
