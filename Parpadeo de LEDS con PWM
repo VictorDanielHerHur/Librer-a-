@@ -1,0 +1,119 @@
+/*
+ * Archivo: main.c
+ * Práctica: Librería STM32F407 + PWM con TIM2
+ * Descripción: Parpadeo de LEDs y control de brillo con PWM
+ */
+
+#include "stm32f407g (2).h"
+
+// ==================== FUNCIONES GPIO ====================
+void GPIO_HabilitarReloj(char puerto) {
+    RCC_AHB1ENR_t *pRCC = (RCC_AHB1ENR_t*)ADDR_RCC_AHB1_BASE;
+    switch(puerto) {
+        case 'A': pRCC->GPIOAEN = 1; break;
+        case 'B': pRCC->GPIOBEN = 1; break;
+        case 'C': pRCC->GPIOCEN = 1; break;
+    }
+}
+
+void GPIO_ConfigurarSalida(char puerto, int pin) {
+    uint32_t dir;
+    switch(puerto) {
+        case 'A': dir = ADDR_GPIOA_BASE; break;
+        case 'B': dir = ADDR_GPIOB_BASE; break;
+        case 'C': dir = ADDR_GPIOC_BASE; break;
+        default: return;
+    }
+    volatile uint32_t *pMODER = (uint32_t*)(dir + GPIO_OFFSET_MODER);
+    *pMODER &= ~(0x3U << (pin * 2));
+    *pMODER |=  (0x1U << (pin * 2));
+}
+
+void GPIO_Escribir(char puerto, int pin, int valor) {
+    uint32_t dir;
+    switch(puerto) {
+        case 'A': dir = ADDR_GPIOA_BASE; break;
+        case 'B': dir = ADDR_GPIOB_BASE; break;
+        case 'C': dir = ADDR_GPIOC_BASE; break;
+        default: return;
+    }
+    volatile uint32_t *pODR = (uint32_t*)(dir + GPIO_OFFSET_ODR);
+    if(valor) *pODR |=  (1U << pin);
+    else      *pODR &= ~(1U << pin);
+}
+
+// ==================== RETARDO ====================
+void Retardo_ms(int ms) {
+    for(int i = 0; i < ms; i++)
+        for(volatile int j = 0; j < 4000; j++);
+}
+
+// ==================== CONFIGURAR PWM TIM2 ====================
+void PWM_Inicializar(void) {
+    // 1. Habilitar reloj TIM2 (APB1)
+    RCC_APB1ENR_t *pRCC = (RCC_APB1ENR_t*)ADDR_RCC_APB1_BASE;
+    pRCC->TIM2EN = 1;
+
+    // 2. Habilitar reloj Puerto A
+    GPIO_HabilitarReloj('A');
+
+    // 3. PA0 → Modo Alternativa (TIM2_CH1)
+    volatile uint32_t *pMODER = (uint32_t*)(ADDR_GPIOA_BASE + GPIO_OFFSET_MODER);
+    *pMODER &= ~(0x3U << (0 * 2));
+    *pMODER |=  (0x2U << (0 * 2));
+
+    volatile uint32_t *pAFRL = (uint32_t*)(ADDR_GPIOA_BASE + GPIO_OFFSET_AFRL);
+    *pAFRL &= ~(0xFU << (0 * 4));
+    *pAFRL |=  (0x1U << (0 * 4));
+
+    // 4. Configurar TIM2
+    ADDR_TIM2_CR1->CEN   = 0;
+    ADDR_TIM2_CR1->ARPE  = 1;
+
+    // Frecuencia PWM ≈ 1 kHz
+    ADDR_TIM2_DATA->PSC  = 83;
+    ADDR_TIM2_DATA->ARR  = 999;
+
+    // 5. Modo PWM Canal 1
+    ADDR_TIM2_CCMR1->CC1S  = 0;
+    ADDR_TIM2_CCMR1->OC1PE = 1;
+    ADDR_TIM2_CCMR1->OC1M  = 6;
+
+    // 6. Habilitar salida
+    ADDR_TIM2_CCER->CC1E   = 1;
+
+    // 7. Iniciar contador
+    ADDR_TIM2_CR1->CEN     = 1;
+}
+
+void PWM_SetDuty(int porcentaje) {
+    if(porcentaje < 0)   porcentaje = 0;
+    if(porcentaje > 100) porcentaje = 100;
+    ADDR_TIM2_DATA->CCR1 = (porcentaje * (ADDR_TIM2_DATA->ARR + 1)) / 100;
+}
+
+// ==================== PROGRAMA PRINCIPAL ====================
+int main(void) {
+    // Configurar LEDs
+    GPIO_HabilitarReloj('A');
+    GPIO_ConfigurarSalida('A', 1);
+    GPIO_ConfigurarSalida('A', 2);
+
+    // Iniciar PWM
+    PWM_Inicializar();
+
+    // Bucle principal
+    while(1) {
+        // Brillo 25%
+        GPIO_Escribir('A', 1, 1);
+        GPIO_Escribir('A', 2, 0);
+        PWM_SetDuty(25);
+        Retardo_ms(500);
+
+        // Brillo 75%
+        GPIO_Escribir('A', 1, 0);
+        GPIO_Escribir('A', 2, 1);
+        PWM_SetDuty(75);
+        Retardo_ms(500);
+    }
+}
