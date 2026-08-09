@@ -1245,3 +1245,94 @@ void SystemClock_Config_168MHz(void) {
 }
 
 #endif /* STM32F407G_H_ */
+// =====================================================
+// REGISTROS DE TEMPORIZADORES (TIM2 a TIM5)
+// =====================================================
+
+typedef struct {
+    uint32_t CEN    : 1;
+    uint32_t UDIS   : 1;
+    uint32_t UTP    : 1;
+    uint32_t CMS    : 2;
+    uint32_t DIR    : 1;
+    uint32_t CMP    : 1;
+    uint32_t ARPE   : 1;
+    uint32_t CKD    : 2;
+    uint32_t RESERV1: 6;
+} TIM_CR1_t;
+
+#define ADDR_TIM2_CR1  ((volatile TIM_CR1_t*)(ADDR_TIM2_BASE + TIM_OFFSET_CR1))
+#define ADDR_TIM3_CR1  ((volatile TIM_CR1_t*)(ADDR_TIM3_BASE + TIM_OFFSET_CR1))
+#define ADDR_TIM4_CR1  ((volatile TIM_CR1_t*)(ADDR_TIM4_BASE + TIM_OFFSET_CR1))
+#define ADDR_TIM5_CR1  ((volatile TIM_CR1_t*)(ADDR_TIM5_BASE + TIM_OFFSET_CR1))
+
+typedef struct {
+    uint32_t CCUS   : 1;
+    uint32_t CCPS   : 1;
+    uint32_t RESERV1: 4;
+    uint32_t OIS    : 1;
+    uint32_t OISN   : 1;
+    uint32_t RESERV2: 8;
+} TIM_CR2_t;
+
+#define ADDR_TIM2_CR2  ((volatile TIM_CR2_t*)(ADDR_TIM2_BASE + TIM_OFFSET_CR2))
+#define ADDR_TIM3_CR2  ((volatile TIM_CR2_t*)(ADDR_TIM3_BASE + TIM_OFFSET_CR2))
+#define ADDR_TIM4_CR2  ((volatile TIM_CR2_t*)(ADDR_TIM4_BASE + TIM_OFFSET_CR2))
+#define ADDR_TIM5_CR2  ((volatile TIM_CR2_t*)(ADDR_TIM5_BASE + TIM_OFFSET_CR2))
+
+typedef struct {
+    uint32_t CC1S   : 2;
+    uint32_t OC1FE  : 1;
+    uint32_t OC1PE  : 1;
+    uint32_t OC1M   : 3;
+    uint32_t OC1CE  : 1;
+    uint32_t CC2S   : 2;
+    uint32_t OC2FE  : 1;
+    uint32_t OC2PE  : 1;
+    uint32_t OC2M   : 3;
+    uint32_t OC2CE  : 1;
+} TIM_CCMR1_t;
+
+#define ADDR_TIM2_CCMR1  ((volatile TIM_CCMR1_t*)(ADDR_TIM2_BASE + TIM_OFFSET_CCMR1))
+#define ADDR_TIM3_CCMR1  ((volatile TIM_CCMR1_t*)(ADDR_TIM3_BASE + TIM_OFFSET_CCMR1))
+#define ADDR_TIM4_CCMR1  ((volatile TIM_CCMR1_t*)(ADDR_TIM4_BASE + TIM_OFFSET_CCMR1))
+#define ADDR_TIM5_CCMR1  ((volatile TIM_CCMR1_t*)(ADDR_TIM5_BASE + TIM_OFFSET_CCMR1))
+
+typedef struct {
+    uint32_t CC1E   : 1;
+    uint32_t CC1P   : 1;
+    uint32_t CC1NE  : 1;
+    uint32_t CC1NP  : 1;
+    uint32_t CC2E   : 1;
+    uint32_t CC2P   : 1;
+    uint32_t CC2NE  : 1;
+    uint32_t CC2NP  : 1;
+    uint32_t CC3E   : 1;
+    uint32_t CC3P   : 1;
+    uint32_t CC3NE  : 1;
+    uint32_t CC3NP  : 1;
+    uint32_t CC4E   : 1;
+    uint32_t CC4P   : 1;
+    uint32_t CC4NP  : 2;
+} TIM_CCER_t;
+
+#define ADDR_TIM2_CCER  ((volatile TIM_CCER_t*)(ADDR_TIM2_BASE + TIM_OFFSET_CCER))
+#define ADDR_TIM3_CCER  ((volatile TIM_CCER_t*)(ADDR_TIM3_BASE + TIM_OFFSET_CCER))
+#define ADDR_TIM4_CCER  ((volatile TIM_CCER_t*)(ADDR_TIM4_BASE + TIM_OFFSET_CCER))
+#define ADDR_TIM5_CCER  ((volatile TIM_CCER_t*)(ADDR_TIM5_BASE + TIM_OFFSET_CCER))
+
+typedef struct {
+    volatile uint32_t CNT;
+    volatile uint32_t PSC;
+    volatile uint32_t ARR;
+    volatile uint32_t RESERV;
+    volatile uint32_t CCR1;
+    volatile uint32_t CCR2;
+    volatile uint32_t CCR3;
+    volatile uint32_t CCR4;
+} TIM_DATA_t;
+
+#define ADDR_TIM2_DATA  ((volatile TIM_DATA_t*)(ADDR_TIM2_BASE + TIM_OFFSET_CNT))
+#define ADDR_TIM3_DATA  ((volatile TIM_DATA_t*)(ADDR_TIM3_BASE + TIM_OFFSET_CNT))
+#define ADDR_TIM4_DATA  ((volatile TIM_DATA_t*)(ADDR_TIM4_BASE + TIM_OFFSET_CNT))
+#define ADDR_TIM5_DATA  ((volatile TIM_DATA_t*)(ADDR_TIM5_BASE + TIM_OFFSET_CNT))
