@@ -1,0 +1,38 @@
+#include <stdint.h>
+
+// === DIRECCIONES DE REGISTROS ADC ===
+#define RCC_APB2ENR  ((uint32_t*)0x40023844)
+#define ADC1_SR      ((uint32_t*)0x40012000)
+#define ADC1_CR2     ((uint32_t*)0x40012008)
+#define ADC1_SQR3    ((uint32_t*)0x40012034)
+#define ADC1_DR      ((uint32_t*)0x4001204C)
+
+#define GPIOA_MODER  ((uint32_t*)0x40020000)
+#define RCC_AHB1ENR  ((uint32_t*)0x40023830)
+
+// === INICIALIZAR ADC Y PINES ANALÓGICOS ===
+void ADC_Inicializar(void)
+{
+    *RCC_AHB1ENR |= (1 << 0);    // Habilitar reloj GPIOA
+    *RCC_APB2ENR |= (1 << 8);    // Habilitar reloj ADC1
+
+    // PA0, PA1, PA2 → Modo analógico
+    *GPIOA_MODER |= ((3 << 0) | (3 << 2) | (3 << 4));
+
+    *ADC1_CR2 |= (1 << 0);        // Encender ADC1
+}
+
+// === LEER VALOR DE UN CANAL ADC ===
+uint16_t ADC_LeerCanal(uint8_t canal)
+{
+    *ADC1_SQR3 = canal;                  // Seleccionar canal
+    *ADC1_CR2 |= (1 << 30);              // Iniciar conversión
+    while((*ADC1_SR & (1 << 1)) == 0);  // Esperar fin
+    return (uint16_t)(*ADC1_DR & 0xFFF); // Devolver valor 0-4095
+}
+
+// === CALCULAR VOLTAJE EN MILIVOLTIOS ===
+uint16_t ADC_CalcularVoltaje(uint16_t valorADC)
+{
+    return (valorADC * 3300UL) / 4095UL;
+}
