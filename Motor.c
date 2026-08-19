@@ -5,19 +5,25 @@
    STM32F407
    ===================================================== */
 
+/* Registro para habilitar reloj de GPIOA */
+#define RCC_AHB1ENR ((uint32_t*)0x40023830)
+
+/* Registros GPIOA */
+#define GPIOA_MODER ((uint32_t*)0x40020000)
+#define GPIOA_ODR   ((uint32_t*)0x40020014)
+
 /* Pines del motor */
 #define IN1_PIN 5
 #define IN2_PIN 6
 #define IN3_PIN 7
 #define IN4_PIN 8
 
-/* Variables de control */
+/* Variables del motor */
 static uint8_t paso = 0;
 static uint8_t direccion = 1;
 static uint8_t motorActivo = 0;
 
-/* Retardo entre pasos
-   Menor retardo = mayor velocidad */
+/* Retardo entre pasos */
 static uint16_t retardo = 10;
 
 
@@ -44,25 +50,28 @@ static const uint8_t secuencia[8][4] =
 
 void Motor_Init(void)
 {
-    /* Configurar PA5, PA6, PA7 y PA8 como salidas */
+    /* Habilitar reloj de GPIOA */
+    *RCC_AHB1ENR |= (1 << 0);
 
-    GPIOA->MODER &= ~(
-        (3 << (IN1_PIN * 2)) |
-        (3 << (IN2_PIN * 2)) |
-        (3 << (IN3_PIN * 2)) |
-        (3 << (IN4_PIN * 2))
+    /* PA5, PA6, PA7 y PA8 como salida */
+
+    *GPIOA_MODER &= ~(
+        (3 << 10) |
+        (3 << 12) |
+        (3 << 14) |
+        (3 << 16)
     );
 
-    GPIOA->MODER |= (
-        (1 << (IN1_PIN * 2)) |
-        (1 << (IN2_PIN * 2)) |
-        (1 << (IN3_PIN * 2)) |
-        (1 << (IN4_PIN * 2))
+    *GPIOA_MODER |= (
+        (1 << 10) |
+        (1 << 12) |
+        (1 << 14) |
+        (1 << 16)
     );
 
-    /* Apagar las cuatro salidas */
+    /* Apagar motor */
 
-    GPIOA->ODR &= ~(
+    *GPIOA_ODR &= ~(
         (1 << IN1_PIN) |
         (1 << IN2_PIN) |
         (1 << IN3_PIN) |
@@ -106,7 +115,7 @@ void Motor_Detener(void)
 {
     motorActivo = 0;
 
-    GPIOA->ODR &= ~(
+    *GPIOA_ODR &= ~(
         (1 << IN1_PIN) |
         (1 << IN2_PIN) |
         (1 << IN3_PIN) |
@@ -121,11 +130,8 @@ void Motor_Detener(void)
 
 void Motor_EjecutarPaso(void)
 {
-    /* Si el motor está detenido no hace nada */
-
     if(motorActivo == 0)
         return;
-
 
     /* Giro horario */
 
@@ -145,33 +151,33 @@ void Motor_EjecutarPaso(void)
     /* IN1 */
 
     if(secuencia[paso][0])
-        GPIOA->ODR |= (1 << IN1_PIN);
+        *GPIOA_ODR |= (1 << IN1_PIN);
     else
-        GPIOA->ODR &= ~(1 << IN1_PIN);
+        *GPIOA_ODR &= ~(1 << IN1_PIN);
 
 
     /* IN2 */
 
     if(secuencia[paso][1])
-        GPIOA->ODR |= (1 << IN2_PIN);
+        *GPIOA_ODR |= (1 << IN2_PIN);
     else
-        GPIOA->ODR &= ~(1 << IN2_PIN);
+        *GPIOA_ODR &= ~(1 << IN2_PIN);
 
 
     /* IN3 */
 
     if(secuencia[paso][2])
-        GPIOA->ODR |= (1 << IN3_PIN);
+        *GPIOA_ODR |= (1 << IN3_PIN);
     else
-        GPIOA->ODR &= ~(1 << IN3_PIN);
+        *GPIOA_ODR &= ~(1 << IN3_PIN);
 
 
     /* IN4 */
 
     if(secuencia[paso][3])
-        GPIOA->ODR |= (1 << IN4_PIN);
+        *GPIOA_ODR |= (1 << IN4_PIN);
     else
-        GPIOA->ODR &= ~(1 << IN4_PIN);
+        *GPIOA_ODR &= ~(1 << IN4_PIN);
 
 
     /* Retardo */
@@ -183,7 +189,7 @@ void Motor_EjecutarPaso(void)
 
 
 /* =====================================================
-   CONTROL DE VELOCIDAD MEDIANTE ADC
+   ADC → VELOCIDAD DEL MOTOR
    ===================================================== */
 
 void Motor_ConfigurarVelocidad(uint16_t valorADC)
@@ -192,17 +198,13 @@ void Motor_ConfigurarVelocidad(uint16_t valorADC)
        ADC = 0     → 10 ms/paso
        ADC = 4095  → 2 ms/paso
 
-       Entre mayor sea el ADC,
-       menor será el retardo y
-       mayor será la velocidad.
+       Mayor ADC = mayor velocidad
     */
 
     retardo = 10 - ((uint32_t)valorADC * 8 / 4095);
 
-
     if(retardo < 2)
         retardo = 2;
-
 
     if(retardo > 10)
         retardo = 10;
@@ -210,7 +212,7 @@ void Motor_ConfigurarVelocidad(uint16_t valorADC)
 
 
 /* =====================================================
-   OBTENER RETARDO ACTUAL
+   OBTENER RETARDO
    ===================================================== */
 
 uint16_t Motor_ObtenerRetardo(void)
