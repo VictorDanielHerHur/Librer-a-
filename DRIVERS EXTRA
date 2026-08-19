@@ -1,0 +1,240 @@
+/*
+ * Archivo: drivers_extra.c
+ * Proyecto: STM32F407
+ *
+ * Drivers adicionales:
+ * GPIO, ADC1, PWM con TIM2 y retardos.
+ */
+
+#include "stm32f407g (2).h"
+#include <stdint.h>
+
+
+/* Registros utilizados del ADC1 */
+#define ADC1_SR_REG      ((volatile uint32_t *)0x40012000U)
+#define ADC1_CR2_REG     ((volatile uint32_t *)0x40012008U)
+#define ADC1_SQR3_REG    ((volatile uint32_t *)0x40012034U)
+#define ADC1_DR_REG      ((volatile uint32_t *)0x4001204CU)
+
+
+/* ================================================================
+ * GPIO
+ * ================================================================ */
+
+void GPIO_HabilitarReloj(char puerto)
+{
+    RCC_AHB1ENR_t *pRCC =
+        (RCC_AHB1ENR_t *)ADDR_RCC_AHB1_BASE;
+
+    switch (puerto)
+    {
+        case 'A':
+            pRCC->GPIOAEN = 1;
+            break;
+
+        case 'B':
+            pRCC->GPIOBEN = 1;
+            break;
+
+        case 'C':
+            pRCC->GPIOCEN = 1;
+            break;
+
+        default:
+            break;
+    }
+}
+
+
+void GPIO_ConfigurarSalida(char puerto, int pin)
+{
+    uint32_t direccion;
+
+    switch (puerto)
+    {
+        case 'A':
+            direccion = ADDR_GPIOA_BASE;
+            break;
+
+        case 'B':
+            direccion = ADDR_GPIOB_BASE;
+            break;
+
+        case 'C':
+            direccion = ADDR_GPIOC_BASE;
+            break;
+
+        default:
+            return;
+    }
+
+    volatile uint32_t *pMODER =
+        (volatile uint32_t *)(direccion + GPIO_OFFSET_MODER);
+
+    *pMODER &= ~(0x3U << (pin * 2));
+    *pMODER |=  (0x1U << (pin * 2));
+}
+
+
+void GPIO_Escribir(char puerto, int pin, int valor)
+{
+    uint32_t direccion;
+
+    switch (puerto)
+    {
+        case 'A':
+            direccion = ADDR_GPIOA_BASE;
+            break;
+
+        case 'B':
+            direccion = ADDR_GPIOB_BASE;
+            break;
+
+        case 'C':
+            direccion = ADDR_GPIOC_BASE;
+            break;
+
+        default:
+            return;
+    }
+
+    volatile uint32_t *pODR =
+        (volatile uint32_t *)(direccion + GPIO_OFFSET_ODR);
+
+    if (valor)
+        *pODR |= (1U << pin);
+    else
+        *pODR &= ~(1U << pin);
+}
+
+
+/* ================================================================
+ * RETARDO
+ * ================================================================ */
+
+void Retardo_ms(int ms)
+{
+    for (int i = 0; i < ms; i++)
+    {
+        for (volatile int j = 0; j < 4000; j++)
+        {
+        }
+    }
+}
+
+
+/* ================================================================
+ * ADC1
+ * ================================================================ */
+
+void ADC_Inicializar(void)
+{
+    RCC_AHB1ENR_t *pRCC_AHB1 =
+        (RCC_AHB1ENR_t *)ADDR_RCC_AHB1_BASE;
+
+    RCC_APB2ENR_t *pRCC_APB2 =
+        (RCC_APB2ENR_t *)ADDR_RCC_APB2_BASE;
+
+    /* Habilitar GPIOA y ADC1 */
+    pRCC_AHB1->GPIOAEN = 1;
+    pRCC_APB2->ADC1EN = 1;
+
+    /* PA0, PA1 y PA2 en modo analógico */
+    volatile uint32_t *pMODER =
+        (volatile uint32_t *)(ADDR_GPIOA_BASE +
+                              GPIO_OFFSET_MODER);
+
+    *pMODER |=
+        (3U << (0 * 2)) |
+        (3U << (1 * 2)) |
+        (3U << (2 * 2));
+
+    /* Encender ADC1 */
+    *ADC1_CR2_REG |= (1U << 0);
+}
+
+
+uint16_t ADC_LeerCanal(uint8_t canal)
+{
+    /* Seleccionar canal */
+    *ADC1_SQR3_REG = canal;
+
+    /* Iniciar conversión */
+    *ADC1_CR2_REG |= (1U << 30);
+
+    /* Esperar fin de conversión */
+    while ((*ADC1_SR_REG & (1U << 1)) == 0)
+    {
+    }
+
+    return (uint16_t)(*ADC1_DR_REG & 0xFFFU);
+}
+
+
+uint16_t ADC_CalcularVoltaje(uint16_t valorADC)
+{
+    return (uint16_t)((valorADC * 3300UL) / 4095UL);
+}
+
+
+/* ================================================================
+ * PWM - TIM2 CH1
+ * ================================================================ */
+
+void PWM_Inicializar(void)
+{
+    RCC_APB1ENR_t *pRCC =
+        (RCC_APB1ENR_t *)ADDR_RCC_APB1_BASE;
+
+    /* Habilitar TIM2 y GPIOA */
+    pRCC->TIM2EN = 1;
+    GPIO_HabilitarReloj('A');
+
+    /* PA0 como función alternativa */
+    volatile uint32_t *pMODER =
+        (volatile uint32_t *)(ADDR_GPIOA_BASE +
+                              GPIO_OFFSET_MODER);
+
+    *pMODER &= ~(0x3U << (0 * 2));
+    *pMODER |=  (0x2U << (0 * 2));
+
+    /* AF1 para TIM2_CH1 */
+    volatile uint32_t *pAFRL =
+        (volatile uint32_t *)(ADDR_GPIOA_BASE +
+                              GPIO_OFFSET_AFRL);
+
+    *pAFRL &= ~(0xFU << (0 * 4));
+    *pAFRL |=  (0x1U << (0 * 4));
+
+    /* Configuración del timer */
+    ADDR_TIM2_CR1->CEN = 0;
+    ADDR_TIM2_CR1->ARPE = 1;
+
+    /* PWM de aproximadamente 1 kHz */
+    ADDR_TIM2_DATA->PSC = 83;
+    ADDR_TIM2_DATA->ARR = 999;
+
+    /* PWM Mode 1 en canal 1 */
+    ADDR_TIM2_CCMR1->CC1S = 0;
+    ADDR_TIM2_CCMR1->OC1PE = 1;
+    ADDR_TIM2_CCMR1->OC1M = 6;
+
+    /* Habilitar salida */
+    ADDR_TIM2_CCER->CC1E = 1;
+
+    /* Iniciar timer */
+    ADDR_TIM2_CR1->CEN = 1;
+}
+
+
+void PWM_SetDuty(int porcentaje)
+{
+    if (porcentaje < 0)
+        porcentaje = 0;
+
+    if (porcentaje > 100)
+        porcentaje = 100;
+
+    ADDR_TIM2_DATA->CCR1 =
+        (porcentaje * (ADDR_TIM2_DATA->ARR + 1U)) / 100U;
+}
