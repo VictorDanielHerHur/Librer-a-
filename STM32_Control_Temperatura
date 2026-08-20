@@ -1,16 +1,29 @@
-STM32_Control_Temperatura
+STM32 Control de Temperatura
 
-compañero 4
-└── Configuración inicial STM32F407
+Proyecto realizado con STM32F407.
 
-Compañero 1
-└── Implementación módulo ADC
+## Funcionamiento
 
-Compañero 2
-└── Implementación módulo PWM
+El potenciómetro conectado a PA0 simula un sensor de temperatura.
 
-Compañero 3
-└── Implementación módulo alarma
+- ADC = 0 -> 0 °C
+- ADC = 4095 -> 100 °C
+- Temperatura menor a 70 °C -> salida PA1 apagada
+- Temperatura igual o mayor a 70 °C -> salida PA1 encendida
 
-Compañero 4
-└── Integración de módulos
+## Módulos
+
+- ADC: lectura del potenciómetro.
+- GPIO: control de la salida de alarma/ventilador.
+- main.c: integración de los módulos.
+
+## Pines
+
+| Pin | Función |
+|---|---|
+| PA0 | Potenciómetro / ADC1_IN0 |
+| PA1 | LED o señal de control |
+
+## Nota
+
+La salida PA1 no debe conectarse directamente a un ventilador. Para un ventilador real se requiere una etapa de potencia (transistor/MOSFET y alimentación adecuada). Para la demostración se puede utilizar un LED con resistencia.
