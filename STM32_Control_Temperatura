@@ -1,0 +1,16 @@
+STM32_Control_Temperatura
+
+compañero 4
+└── Configuración inicial STM32F407
+
+Compañero 1
+└── Implementación módulo ADC
+
+Compañero 2
+└── Implementación módulo PWM
+
+Compañero 3
+└── Implementación módulo alarma
+
+Compañero 4
+└── Integración de módulos
