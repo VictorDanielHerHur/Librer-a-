@@ -15,6 +15,7 @@ uint8_t estado_elevador = 0; // 0=Detenido, 1=Subiendo, 2=Bajando
 
 uint8_t estado_elevador = 0; // 0=Detenido, 1=Subiendo, 2=Bajando
 int piso_actual = 1;
+}
 
 
 
