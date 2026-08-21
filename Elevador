@@ -1,0 +1,102 @@
+#include "Motor.h"
+
+const uint8_t secuencia_pasos[4] = {12, 6, 3, 9};
+uint8_t indice_paso = 0;
+uint8_t velocidad = 50;
+
+/* === CONFIGURAR PUERTOS GPIO === */
+void Motor_Configurar_Puertos(void)
+{
+  // Habilitar reloj: Puerto A (bit0) y Puerto C (bit2)
+  *RCC_AHB1ENR |= (1 << 0) | (1 << 2);
+
+  // PA1, PA2 → Modo SALIDA (01)
+  *GPIOA_MODER &= ~((3 << (IN2_PIN*2)) | (3 << (IN3_PIN*2)));
+  *GPIOA_MODER |=  ((1 << (IN2_PIN*2)) | (1 << (IN3_PIN*2)));
+
+  // PC5 → Modo SALIDA
+  *GPIOC_MODER &= ~(3 << (IN4_PIN*2));
+  *GPIOC_MODER |=  (1 << (IN4_PIN*2));
+
+  // PC0, PC1 → Entrada con PULL-UP
+  *GPIOC_PUPDR &= ~((3 << (BTN_UP*2)) | (3 << (BTN_DOWN*2)));
+  *GPIOC_PUPDR |=  ((1 << (BTN_UP*2)) | (1 << (BTN_DOWN*2)));
+}
+
+/* === CONFIGURAR TIM2 PARA PWM === */
+void PWM_Configurar_TIM2(void)
+{
+  // Habilitar reloj TIM2 (bit0 en APB1)
+  uint32_t *RCC_APB1ENR = (uint32_t*)0x40023840;
+  *RCC_APB1ENR |= (1 << 0);
+
+  // PA5 → Modo Función Alternativa (10)
+  *GPIOA_MODER &= ~(3 << (IN1_PIN*2));
+  *GPIOA_MODER |=  (2 << (IN1_PIN*2));
+
+  // AFRL PA5 → AF01 (TIM2)
+  uint32_t *GPIOA_AFRL = (uint32_t*)0x40020020;
+  *GPIOA_AFRL &= ~(0xF << (IN1_PIN*4));
+  *GPIOA_AFRL |=  (0x01 << (IN1_PIN*4));
+
+  // Configurar TIM2: PSC=84-1, ARR=5000
+  TIM2_CR1  = (0 << 0);
+  TIM2_PSC  = 84 - 1;
+  TIM2_ARR  = 5000;
+
+  // Canal 1 → PWM Modo 1
+  TIM2_CCMR1 = (6 << 4);
+  TIM2_CCER  = (1 << 0);
+  TIM2_BDTR |= (1 << 15);
+
+  // Encender contador
+  TIM2_CR1 |= (1 << 0);
+}
+/* === MOVER MOTOR UN PASO === */
+void Motor_AvanzarPaso(void)
+{
+  uint8_t estado = secuencia_pasos[indice_paso];
+
+  // IN1 = PA5 → PWM
+  TIM2_CCR1 = (estado & 1) ? (velocidad * 50) : 0;
+
+  // IN2 = PA1
+  if(estado & 2) *GPIOA_ODR |=  (1 << IN2_PIN);
+  else           *GPIOA_ODR &= ~(1 << IN2_PIN);
+
+  // IN3 = PA2
+  if(estado & 4) *GPIOA_ODR |=  (1 << IN3_PIN);
+  else           *GPIOA_ODR &= ~(1 << IN3_PIN);
+
+  // IN4 = PC5
+  if(estado & 8) *GPIOC_ODR |=  (1 << IN4_PIN);
+  else           *GPIOC_ODR &= ~(1 << IN4_PIN);
+
+  indice_paso++;
+  if(indice_paso >= 4) indice_paso = 0;
+}
+
+/* === LEER BOTONES Y AJUSTAR VELOCIDAD === */
+void Botones_Control_Velocidad(void)
+{
+  // Botón PC0 → AUMENTAR
+  if( !(*GPIOC_IDR & (1 << BTN_UP)) )
+  {
+    if(velocidad < 100) velocidad += 5;
+    Retardo_ms(200);
+  }
+
+  // Botón PC1 → DISMINUIR
+  if( !(*GPIOC_IDR & (1 << BTN_DOWN)) )
+  {
+    if(velocidad > 5) velocidad -= 5;
+    Retardo_ms(200);
+  }
+}
+
+/* === RETARDO EN MILISEGUNDAS === */
+void Retardo_ms(uint32_t ms)
+{
+  uint32_t i;
+  for(i = 0; i < (ms * 8400); i++);
+}
